@@ -4,11 +4,6 @@ import re
 from datetime import date
 
 
-excel = Files()
-excel.open_workbook("challenge.xlsx")
-sheet = excel.read_worksheet_as_table(header=True)
-
-
 class RecordHandler:
     REGEX_MATCHER = r".*in.(\d{1,4}).milliseconds"
     record_time = None
@@ -49,6 +44,10 @@ def myeval(page, xpath, elval):
 
 
 rh = RecordHandler()
+excel = Files()
+excel.open_workbook("challenge.xlsx")
+sheet = excel.read_worksheet_as_table(header=True)
+
 with sync_playwright() as p:
     browser = p.chromium.launch(headless=True)
     page = browser.newPage()
