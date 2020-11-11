@@ -1,9 +1,10 @@
 from RPA.Excel.Files import Files
-from RPA.Browser import Browser
+import RPA.Browser
 from playwright import sync_playwright
 import re
 from datetime import date
 
+import Browser
 
 class RecordHandler:
     REGEX_MATCHER = r".*in.(\d{1,4}).milliseconds"
@@ -38,8 +39,10 @@ class RecordHandler:
             screenshot_filename = (
                 f"record_{self.engine}_{today.strftime('%d%m%Y')}_time{task_time}ms.png"
             )
-            if isinstance(page, Browser):
+            if isinstance(page, RPA.Browser.Browser):
                 page.screenshot(filename=screenshot_filename)
+            elif isinstance(page, Browser.Browser):
+                page.take_screenshot(filename=screenshot_filename)
             else:
                 page.screenshot(path=screenshot_filename)
 
@@ -48,7 +51,7 @@ def myeval(browser_object, xpath, elval):
     eval_str_pw = """([xpath, elval]) => {
         document.evaluate(xpath, document.body, null, 9, null).singleNodeValue.value = elval;}"""
     eval_str_sel = f"document.evaluate('{xpath}', document.body, null, 9, null).singleNodeValue.value = '{elval}';"
-    if isinstance(browser_object, Browser):
+    if isinstance(browser_object, RPA.Browser.Browser):
         browser_object.execute_javascript(eval_str_sel)
     else:
         browser_object.evaluate(
@@ -90,9 +93,32 @@ def run_with_playwright(rh, sheet):
         browser.close()
 
 
+def run_with_rfbrowser(rh, sheet):
+    print("Running RPA Challenge with RFBrowser (RobotFramework Playwright)")
+    browser = Browser.Browser()
+    browser.new_context()
+    browser.set_browser_timeout("30s")
+    browser.new_page("http://www.rpachallenge.com")
+    browser.click('"Start"')
+    for row in sheet:
+        browser.fill_text('//input[@ng-reflect-name="labelFirstName"]', row["First Name"])
+        browser.fill_text('//input[@ng-reflect-name="labelLastName"]', row["Last Name"])
+        browser.fill_text('//input[@ng-reflect-name="labelCompanyName"]' ,row["Company Name"])
+        browser.fill_text('//input[@ng-reflect-name="labelRole"]', row["Role in Company"])
+        browser.fill_text('//input[@ng-reflect-name="labelAddress"]', row["Address"])
+        browser.fill_text('//input[@ng-reflect-name="labelEmail"]', row["Email"])
+        browser.fill_text('//input[@ng-reflect-name="labelPhone"]', str(row["Phone Number"]))
+        browser.click('input[type="submit"]')
+
+    result = browser.get_text('.message2')
+
+    rh.check_for_new_record(browser, result)
+    browser.close_browser()
+
+
 def run_with_rpabrowser(rh, sheet):
     print("Running RPA Challenge with RPA Browser (Selenium)")
-    browser = Browser()
+    browser = RPA.Browser.Browser()
     browser.open_available_browser("http://www.rpachallenge.com", headless=True)
     browser.click_button_when_visible("//button[text()='Start']")
     for row in sheet:
@@ -124,6 +150,9 @@ excel = Files()
 excel.open_workbook("challenge.xlsx")
 sheet = excel.read_worksheet_as_table(header=True)
 
+
+rh.set_engine("robotframework-browser")
+run_with_rfbrowser(rh, sheet)
 rh.set_engine("playwright")
 run_with_playwright(rh, sheet)
 rh.set_engine("rpabrowser")

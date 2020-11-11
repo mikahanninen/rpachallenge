@@ -1,2 +1,3 @@
 rpaframework
 playwright
+robotframework-browser
