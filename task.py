@@ -8,7 +8,9 @@ from datetime import date
 from progress.bar import Bar
 import time
 
-js_filepath = str((Path(".") / "modify_dom.js").absolute())
+modify_dom_path = str((Path(".") / "modify_dom.js").absolute())
+executable_path = str((Path(".") / "executable.js").absolute())
+
 rpachallenge_site = "http://www.rpachallenge.com"
 
 
@@ -143,7 +145,21 @@ def run_with_rpabrowser(rh, sheet, js=False):
         rpachallenge_site, browser_selection="chrome,firefox", headless=True
     )
     if js:
-        browser.execute_javascript(js_filepath)
+        modify_dom = ""
+        tofile = "const taskdata = [\n"
+        for row in sheet:
+            tofile += "{"
+            for key, value in row.items():
+                tofile += f"'{key}': '{value}',"
+            tofile = tofile[:-1]
+            tofile += "},\n"
+        tofile += "]"
+        with open("modify_dom.js", "r") as f:
+            modify_dom = f.read()
+        with open("executable.js", "w") as f:
+            f.write(tofile)
+            f.write("\n\n" + modify_dom)
+        browser.execute_javascript(executable_path)
     else:
         browser.click_button_when_visible("//button[text()='Start']")
         for row in sheet:
@@ -178,29 +194,33 @@ def run_with_rpabrowser(rh, sheet, js=False):
     browser.close_browser()
 
 
-rh = RecordHandler()
-excel = Files()
-excel.open_workbook("challenge.xlsx")
-sheet = excel.read_worksheet_as_table(header=True)
+def main():
+    rh = RecordHandler()
+    excel = Files()
+    excel.open_workbook("challenge.xlsx")
+    sheet = excel.read_worksheet_as_table(header=True)
+
+    # rh.set_engine("robotframework-browser")
+    # run_with_rfbrowser(rh, sheet)
+    # rh.set_engine("playwright")
+    # run_with_playwright(rh, sheet)
+    # rh.set_engine("rpabrowser")
+    # run_with_rpabrowser(rh, sheet)
+    # rh.set_engine("playwright")
+    # run_with_playwright(rh, sheet)
+    # rh.set_engine("rpabrowser")
+    # run_with_rpabrowser(rh, sheet)
+
+    sleeptime = 300
+    while True:
+        rh.set_engine("rpabrowser_js")
+        run_with_rpabrowser(rh, sheet, True)
+        bar = Bar("sleeping", max=sleeptime)
+        for i in range(sleeptime):
+            bar.next()
+            time.sleep(1)
+        bar.finish()
 
 
-# rh.set_engine("robotframework-browser")
-# run_with_rfbrowser(rh, sheet)
-# rh.set_engine("playwright")
-# run_with_playwright(rh, sheet)
-# rh.set_engine("rpabrowser")
-# run_with_rpabrowser(rh, sheet)
-# rh.set_engine("playwright")
-# run_with_playwright(rh, sheet)
-# rh.set_engine("rpabrowser")
-# run_with_rpabrowser(rh, sheet)
-
-sleeptime = 300
-while True:
-    rh.set_engine("rpabrowser_js")
-    run_with_rpabrowser(rh, sheet, True)
-    bar = Bar("sleeping", max=sleeptime)
-    for i in range(sleeptime):
-        bar.next()
-        time.sleep(1)
-    bar.finish()
+if __name__ == "__main__":
+    main()
