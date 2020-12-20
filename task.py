@@ -1,10 +1,16 @@
+import Browser
 from RPA.Excel.Files import Files
 import RPA.Browser
+from pathlib import Path
 from playwright import sync_playwright
 import re
 from datetime import date
+from progress.bar import Bar
+import time
 
-import Browser
+js_filepath = str((Path(".") / "modify_dom.js").absolute())
+rpachallenge_site = "http://www.rpachallenge.com"
+
 
 class RecordHandler:
     REGEX_MATCHER = r".*in.(\d{1,4}).milliseconds"
@@ -65,11 +71,13 @@ def run_with_playwright(rh, sheet):
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         page = browser.newPage()
-        page.goto("http://www.rpachallenge.com")
+        page.goto(rpachallenge_site)
         page.click('text="Start"')
         for row in sheet:
             myeval(
-                page, '//input[@ng-reflect-name="labelFirstName"]', row["First Name"]
+                page,
+                '//input[@ng-reflect-name="labelFirstName"]',
+                row["First Name"],
             )
             myeval(page, '//input[@ng-reflect-name="labelLastName"]', row["Last Name"])
             myeval(
@@ -78,12 +86,16 @@ def run_with_playwright(rh, sheet):
                 row["Company Name"],
             )
             myeval(
-                page, '//input[@ng-reflect-name="labelRole"]', row["Role in Company"]
+                page,
+                '//input[@ng-reflect-name="labelRole"]',
+                row["Role in Company"],
             )
             myeval(page, '//input[@ng-reflect-name="labelAddress"]', row["Address"])
             myeval(page, '//input[@ng-reflect-name="labelEmail"]', row["Email"])
             myeval(
-                page, '//input[@ng-reflect-name="labelPhone"]', str(row["Phone Number"])
+                page,
+                '//input[@ng-reflect-name="labelPhone"]',
+                str(row["Phone Number"]),
             )
             page.evaluate("""document.querySelector('input[type="submit"]').click();""")
         result = page.evaluate(
@@ -98,46 +110,67 @@ def run_with_rfbrowser(rh, sheet):
     browser = Browser.Browser()
     browser.new_context()
     browser.set_browser_timeout("30s")
-    browser.new_page("http://www.rpachallenge.com")
+    browser.new_page(rpachallenge_site)
     browser.click('"Start"')
     for row in sheet:
-        browser.fill_text('//input[@ng-reflect-name="labelFirstName"]', row["First Name"])
+        browser.fill_text(
+            '//input[@ng-reflect-name="labelFirstName"]', row["First Name"]
+        )
         browser.fill_text('//input[@ng-reflect-name="labelLastName"]', row["Last Name"])
-        browser.fill_text('//input[@ng-reflect-name="labelCompanyName"]' ,row["Company Name"])
-        browser.fill_text('//input[@ng-reflect-name="labelRole"]', row["Role in Company"])
+        browser.fill_text(
+            '//input[@ng-reflect-name="labelCompanyName"]', row["Company Name"]
+        )
+        browser.fill_text(
+            '//input[@ng-reflect-name="labelRole"]', row["Role in Company"]
+        )
         browser.fill_text('//input[@ng-reflect-name="labelAddress"]', row["Address"])
         browser.fill_text('//input[@ng-reflect-name="labelEmail"]', row["Email"])
-        browser.fill_text('//input[@ng-reflect-name="labelPhone"]', str(row["Phone Number"]))
+        browser.fill_text(
+            '//input[@ng-reflect-name="labelPhone"]', str(row["Phone Number"])
+        )
         browser.click('input[type="submit"]')
 
-    result = browser.get_text('.message2')
+    result = browser.get_text(".message2")
 
     rh.check_for_new_record(browser, result)
     browser.close_browser()
 
 
-def run_with_rpabrowser(rh, sheet):
-    print("Running RPA Challenge with RPA Browser (Selenium)")
-    browser = RPA.Browser.Browser()
-    browser.open_available_browser("http://www.rpachallenge.com", headless=True)
-    browser.click_button_when_visible("//button[text()='Start']")
-    for row in sheet:
-        myeval(browser, '//input[@ng-reflect-name="labelFirstName"]', row["First Name"])
-        myeval(browser, '//input[@ng-reflect-name="labelLastName"]', row["Last Name"])
-        myeval(
-            browser,
-            '//input[@ng-reflect-name="labelCompanyName"]',
-            row["Company Name"],
-        )
-        myeval(browser, '//input[@ng-reflect-name="labelRole"]', row["Role in Company"])
-        myeval(browser, '//input[@ng-reflect-name="labelAddress"]', row["Address"])
-        myeval(browser, '//input[@ng-reflect-name="labelEmail"]', row["Email"])
-        myeval(
-            browser, '//input[@ng-reflect-name="labelPhone"]', str(row["Phone Number"])
-        )
-        browser.execute_javascript(
-            """document.querySelector('input[type="submit"]').click();"""
-        )
+def run_with_rpabrowser(rh, sheet, js=False):
+    print(f"Running RPA Challenge with RPA Browser (Selenium) - JS: {js}")
+    browser = Browser()
+    browser.open_available_browser(
+        rpachallenge_site, browser_selection="chrome,firefox", headless=True
+    )
+    if js:
+        browser.execute_javascript(js_filepath)
+    else:
+        browser.click_button_when_visible("//button[text()='Start']")
+        for row in sheet:
+            myeval(
+                browser, '//input[@ng-reflect-name="labelFirstName"]', row["First Name"]
+            )
+            myeval(
+                browser, '//input[@ng-reflect-name="labelLastName"]', row["Last Name"]
+            )
+            myeval(
+                browser,
+                '//input[@ng-reflect-name="labelCompanyName"]',
+                row["Company Name"],
+            )
+            myeval(
+                browser, '//input[@ng-reflect-name="labelRole"]', row["Role in Company"]
+            )
+            myeval(browser, '//input[@ng-reflect-name="labelAddress"]', row["Address"])
+            myeval(browser, '//input[@ng-reflect-name="labelEmail"]', row["Email"])
+            myeval(
+                browser,
+                '//input[@ng-reflect-name="labelPhone"]',
+                str(row["Phone Number"]),
+            )
+            browser.execute_javascript(
+                """document.querySelector('input[type="submit"]').click();"""
+            )
     result = browser.execute_javascript(
         """return document.querySelector('.message2').textContent;"""
     )
@@ -151,9 +184,23 @@ excel.open_workbook("challenge.xlsx")
 sheet = excel.read_worksheet_as_table(header=True)
 
 
-rh.set_engine("robotframework-browser")
-run_with_rfbrowser(rh, sheet)
-rh.set_engine("playwright")
-run_with_playwright(rh, sheet)
-rh.set_engine("rpabrowser")
-run_with_rpabrowser(rh, sheet)
+# rh.set_engine("robotframework-browser")
+# run_with_rfbrowser(rh, sheet)
+# rh.set_engine("playwright")
+# run_with_playwright(rh, sheet)
+# rh.set_engine("rpabrowser")
+# run_with_rpabrowser(rh, sheet)
+# rh.set_engine("playwright")
+# run_with_playwright(rh, sheet)
+# rh.set_engine("rpabrowser")
+# run_with_rpabrowser(rh, sheet)
+
+sleeptime = 300
+while True:
+    rh.set_engine("rpabrowser_js")
+    run_with_rpabrowser(rh, sheet, True)
+    bar = Bar("sleeping", max=sleeptime)
+    for i in range(sleeptime):
+        bar.next()
+        time.sleep(1)
+    bar.finish()
