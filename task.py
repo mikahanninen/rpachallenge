@@ -1,6 +1,6 @@
 import Browser
 from RPA.Excel.Files import Files
-import RPA.Browser
+import RPA.Browser.Selenium
 from pathlib import Path
 from playwright import sync_playwright
 import re
@@ -138,7 +138,7 @@ def run_with_rfbrowser(rh, sheet):
 
 def run_with_rpabrowser(rh, sheet, js=False):
     print(f"Running RPA Challenge with RPA Browser (Selenium) - JS: {js}")
-    browser = Browser()
+    browser = RPA.Browser.Selenium.Selenium()
     browser.open_available_browser(
         rpachallenge_site, browser_selection="chrome,firefox", headless=True
     )
