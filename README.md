@@ -4,4 +4,4 @@
 * rfbrowser init
 * python task.py
 
-![Current personal best which is recorded](record_08112020_time178ms.png?raw=true "Current personal best which is recorded")
+![Current personal best which is recorded](record_20122020_time47ms.png?raw=true "Current personal best which is recorded")
