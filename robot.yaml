@@ -1,8 +1,12 @@
 tasks:
-  Default:
+  RunAllEngines:
     command:
       - python
       - task.py
+  RunRPABrowserJS:
+    command:
+      - python
+      - task.py rpabrowser_js
 
 condaConfigFile: conda.yaml
 artifactsDir: output
