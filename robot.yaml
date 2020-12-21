@@ -6,7 +6,8 @@ tasks:
   RunRPABrowserJS:
     command:
       - python
-      - task.py rpabrowser_js
+      - task.py
+      - rpabrowser_js
 
 condaConfigFile: conda.yaml
 artifactsDir: output
